@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<title>RunTrack – GPS Running & Ground Mapping</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0d1b14">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="RunTrack">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+:root{--bg:#f2f5f0;--sf:#fff;--tx:#0f1a13;--mu:#5c6a61;--ac:#15803d;--ac2:#dcfce7;--rd:#dc2626;--ln:#dde5de;--on:#fff}
+@media(prefers-color-scheme:dark){:root{--bg:#0a110d;--sf:#131d17;--tx:#e9f2ec;--mu:#8fa196;--ac:#7ee06a;--ac2:#17301d;--rd:#ff6b5e;--ln:#22302a;--on:#06210f}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--tx);font:16px/1.4 "Barlow",system-ui,sans-serif}
+#app{max-width:520px;margin:0 auto;height:100dvh;display:flex;flex-direction:column;position:relative;background:var(--bg);box-shadow:0 0 0 1px var(--ln)}
+header{display:flex;align-items:center;gap:10px;padding:calc(10px + env(safe-area-inset-top,0px)) 14px 10px}
+.brand{flex:1;display:flex;align-items:center;gap:10px;font:700 26px "Barlow Condensed",sans-serif;letter-spacing:.3px}
+.brand i{width:12px;height:12px;border-radius:50%;background:var(--ac);box-shadow:0 0 0 4px var(--ac2)}
+#prof{width:44px;height:44px;border-radius:50%;border:2px solid var(--ac);background:var(--ac2);color:var(--ac);font:700 20px "Barlow Condensed",sans-serif;cursor:pointer}
+main{flex:1;overflow-y:auto;padding:0 14px 120px}
+.tab{display:none}.tab.on{display:block}
+.map{height:270px;border-radius:14px;border:1px solid var(--ln);background:#ebe8e0;overflow:hidden;z-index:0}
+.mw{position:relative}.loc{position:absolute;right:10px;bottom:34px;z-index:500;width:44px;height:44px;border-radius:50%;border:0;background:var(--sf);color:var(--tx);box-shadow:0 2px 8px #0006;cursor:pointer;display:grid;place-items:center}.loc svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round}
+.perm{position:absolute;inset:0;z-index:2000;background:#000b;display:flex;align-items:flex-end;padding:14px}.perm[hidden]{display:none}
+.pc{background:var(--sf);border-radius:20px;padding:20px;width:100%;margin-bottom:env(safe-area-inset-bottom,0px)}.pc h2{margin:0 0 6px}.pc p{color:var(--mu);margin:0 0 14px}.pc .row{margin:0}.btn.ghost{background:var(--ln);color:var(--tx)}
+select{width:100%;font:inherit;padding:11px;border-radius:10px;border:1px solid var(--ln);background:var(--sf);color:var(--tx);margin-top:4px}input[type=range]{width:100%;margin-top:8px}
+.flag{font-size:26px;line-height:1;filter:drop-shadow(0 1px 2px #0008)}.chip{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:10px}.chip[hidden]{display:none}.sbtn{padding:8px 12px;border-radius:10px;border:0;background:var(--ac2);color:var(--ac);font:600 14px Barlow,sans-serif;cursor:pointer}
+.warn{background:var(--rd);color:#fff;padding:10px 14px;border-radius:12px;margin:0 0 10px;font-size:15px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+.card{background:var(--sf);border:1px solid var(--ln);border-radius:14px;padding:10px 14px}
+.card small{display:block;color:var(--mu);font-size:14px}
+.card b{display:block;font:700 38px/1.1 "Barlow Condensed",sans-serif}
+.card b i{font:500 15px "Barlow",sans-serif;font-style:normal;color:var(--mu);margin-left:5px}
+.bar{height:6px;border-radius:3px;background:var(--ln);margin-top:6px;overflow:hidden}
+.bar div{height:100%;width:0;background:var(--ac);transition:width .4s}
+#st{margin:10px 2px;color:var(--mu);font-size:14px}
+.row{display:flex;gap:10px;margin:10px 0}
+.btn{flex:1;padding:14px;border-radius:14px;border:0;background:var(--ac);color:var(--on);font:700 20px "Barlow Condensed",sans-serif;cursor:pointer}
+.btn.stop{background:var(--rd);color:#fff}
+.btn:disabled{opacity:.4;cursor:default}
+nav{position:absolute;left:0;right:0;bottom:0;display:grid;grid-template-columns:1fr 1fr 84px 1fr 1fr;background:var(--sf);border-top:1px solid var(--ln);padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px))}
+nav button{background:none;border:0;color:var(--mu);font:500 12px "Barlow",sans-serif;padding:4px 0;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px}
+nav button.on{color:var(--ac);font-weight:600}
+nav svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#fab{position:absolute;z-index:5;left:50%;bottom:calc(30px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);width:74px;height:74px;border-radius:50%;border:5px solid var(--bg);background:var(--ac);color:var(--on);font:700 18px "Barlow Condensed",sans-serif;cursor:pointer}
+#fab.stop{background:var(--rd);color:#fff}
+h2{font:700 28px "Barlow Condensed",sans-serif;margin:4px 2px 10px}
+h3{font:700 20px "Barlow Condensed",sans-serif;margin:16px 2px 8px}
+.item{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.item span{color:var(--mu);margin-left:6px}.item small{display:block;color:var(--mu)}
+.x{background:none;border:0;color:var(--mu);font-size:18px;cursor:pointer;padding:6px 10px}
+.empty{color:var(--mu);margin:8px 2px}
+label{display:block;color:var(--mu);font-size:14px;margin-top:12px}
+input[type=text],input[type=number],input[type=password]{width:100%;font:inherit;padding:11px;border-radius:10px;border:1px solid var(--ln);background:var(--sf);color:var(--tx);margin-top:4px}
+.chk{display:flex;gap:10px;align-items:center;color:var(--tx)}
+#toast{position:absolute;left:14px;right:14px;top:70px;background:var(--tx);color:var(--bg);padding:12px 14px;border-radius:12px;z-index:1000;display:none;font-size:15px}
+button:focus-visible,input:focus-visible{outline:3px solid var(--ac);outline-offset:2px}
+</style>
+</head>
+<body>
+<div id="app">
+<header><div class="brand"><i></i>RunTrack</div><button id="prof" aria-label="Profile">R</button></header>
+<div id="perm" class="perm" hidden><div class="pc"><h2>Location allow karo</h2><p id="pm"></p><div class="row"><button class="btn" id="pa">Allow location</button><button class="btn ghost" id="pl">Baad me</button></div></div></div>
+<div id="toast" role="status"></div>
+<main>
+<section class="tab on" id="t-home">
+<p id="warn" class="warn" hidden></p><div class="mw"><div class="map" id="map1"></div><button class="loc" data-m="1" aria-label="Meri location"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button></div>
+<div class="grid">
+<div class="card"><small>Speed</small><b><span id="spd">0.0</span><i>km/h</i></b></div>
+<div class="card"><small>Time</small><b id="clk">--:--</b></div>
+<div class="card"><small>Goal</small><b><span id="gd">0.00</span><i>/ <span id="gg">5</span> km</i></b><div class="bar"><div id="gb"></div></div></div>
+<div class="card"><small>Running time</small><b id="rt">00:00</b></div>
+</div>
+<div class="card" style="margin-top:10px"><small>Chakkar (laps)</small><b><span id="lp">0</span><i id="ll"></i></b></div>
+<div class="card chip" id="gch" hidden><div><small>Ground</small><b style="font-size:22px" id="gct"></b></div><div><button class="sbtn" id="gf">Dikhao</button> <button class="sbtn" id="gx">Hatao</button></div></div>
+<p id="st">Start Running dabao. Browser GPS permission mange to Allow karo.</p>
+</section>
+<section class="tab" id="t-ground">
+<div class="mw"><div class="map" id="map2"></div><button class="loc" data-m="2" aria-label="Meri location"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg></button></div>
+<div class="row"><button class="btn" id="mg">Map kare</button><button class="btn stop" id="ms" disabled>Stop</button></div>
+<div class="card"><small>Kitna mapped hua</small><b><span id="mp">0</span><i>m boundary</i></b><b><span id="ma">0</span><i>m² area</i></b></div>
+<p id="gh" class="empty">Ground ki boundary par ek round chalo, phir Stop dabao.</p>
+<h3>Saved grounds</h3><div id="gl"></div>
+</section>
+<section class="tab" id="t-hist"><h2>History</h2><div class="card" style="margin-bottom:10px"><small>Total</small><b id="ht">0 runs</b></div><div id="hl"></div></section>
+<section class="tab" id="t-set"><h2>Settings</h2>
+<label for="sn">Aapka naam</label><input type="text" id="sn" maxlength="20">
+<label for="sg">Goal (km)</label><input type="number" id="sg" min="0.5" step="0.5">
+<label for="sk">Google Maps API key (optional)</label><input type="password" id="sk" autocomplete="off" placeholder="Khali chhodo = OpenStreetMap">
+<label class="chk"><input type="checkbox" id="ss"> Test mode (GPS ke bina demo run)</label>
+<label class="chk"><input type="checkbox" id="sv"> Voice (har chakkar ka time bole)</label>
+<label for="sw">Awaaz (voice)</label><select id="sw"></select>
+<label for="sr">Bolne ki speed</label><input type="range" id="sr" min=".6" max="1.3" step=".05">
+<div class="row"><button class="btn ghost" id="vt">Voice test sunao</button></div>
+<div class="row"><button class="btn" id="save">Save</button></div>
+<div class="row"><button class="btn ghost" id="inst" hidden>App install karo</button></div>
+</section>
+</main>
+<button id="fab">Start</button>
+<nav>
+<button data-t="home" class="on"><svg viewBox="0 0 24 24"><path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg>Home</button>
+<button data-t="ground"><svg viewBox="0 0 24 24"><path d="M3 6l6-2 6 2 6-2v14l-6 2-6-2-6 2zM9 4v14M15 6v14"/></svg>Ground mapping</button>
+<span></span>
+<button data-t="hist"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>History</button>
+<button data-t="set"><svg viewBox="0 0 24 24"><path d="M4 6h8M18 6h2M4 12h2M12 12h8M4 18h10M20 18h0"/><circle cx="15" cy="6" r="2"/><circle cx="9" cy="12" r="2"/><circle cx="17" cy="18" r="2"/></svg>Setting</button>
+</nav>
+</div>
+<script>
+const $=i=>document.getElementById(i);
+let S={name:"Runner",goal:5,key:"",sim:false,runs:[],grounds:[],voice:true,active:null};
+try{Object.assign(S,JSON.parse(localStorage.getItem("runtrack")||"{}"))}catch(e){}
+const persist=()=>{try{localStorage.setItem("runtrack",JSON.stringify(S))}catch(e){}};
+const R=6371000,rad=d=>d*Math.PI/180,pad=n=>String(n).padStart(2,"0");
+const mmss=s=>{s=Math.floor(s);const h=Math.floor(s/3600);return(h?h+":":"")+pad(Math.floor(s%3600/60))+":"+pad(s%60)};
+function hav(a,b){const x=rad(b.lat-a.lat),y=rad(b.lon-a.lon),h=Math.sin(x/2)**2+Math.cos(rad(a.lat))*Math.cos(rad(b.lat))*Math.sin(y/2)**2;return 2*R*Math.asin(Math.sqrt(h))}
+function perim(p){let s=0;for(let i=1;i<p.length;i++)s+=hav(p[i-1],p[i]);return s}
+function area(p){if(p.length<3)return 0;const o=p[0],k=Math.cos(rad(o.lat)),q=p.map(a=>[rad(a.lon-o.lon)*R*k,rad(a.lat-o.lat)*R]);let s=0;for(let i=0;i<q.length;i++){const j=(i+1)%q.length;s+=q[i][0]*q[j][1]-q[j][0]*q[i][1]}return Math.abs(s/2)}
+let tt;function toast(t){const e=$("toast");e.textContent=t;e.style.display="block";clearTimeout(tt);tt=setTimeout(()=>e.style.display="none",4500)}
+
+/* Map wrapper: Google Maps (if key) or Leaflet + OpenStreetMap */
+function MapView(el){
+ const G=S.key&&window.google&&google.maps;
+ let m,line,shape,dot;
+ if(G){
+  m=new google.maps.Map(el,{center:{lat:20.59,lng:78.96},zoom:5,disableDefaultUI:true,gestureHandling:"greedy"});
+  line=new google.maps.Polyline({map:m,strokeColor:"#16a34a",strokeWeight:6});
+  shape=new google.maps.Polygon({map:m,fillColor:"#16a34a",fillOpacity:.25,strokeOpacity:0});
+  dot=new google.maps.Marker({map:m,visible:false,icon:{path:google.maps.SymbolPath.CIRCLE,scale:8,fillColor:"#2563eb",fillOpacity:1,strokeColor:"#fff",strokeWeight:3}});
+  const ac=new google.maps.Circle({map:m,fillColor:"#2563eb",fillOpacity:.15,strokeWeight:0,visible:false});
+  const gl=new google.maps.Polygon({map:m,strokeColor:"#3b82f6",strokeOpacity:.6,strokeWeight:6,fillColor:"#3b82f6",fillOpacity:.08}),gd=new google.maps.Polyline({map:m,strokeColor:"#f59e0b",strokeWeight:3,strokeOpacity:.8}),fl=new google.maps.Marker({map:m,visible:false,label:"🚩"});let raf=0;
+  return{size(){google.maps.event.trigger(m,"resize")},
+   ground(pts,fit){const a=pts?pts.map(p=>({lat:p.lat,lng:p.lon})):[];gl.setPath(a);fl.setVisible(!!a.length);if(a.length){fl.setPosition(a[0]);if(fit){const b=new google.maps.LatLngBounds();a.forEach(x=>b.extend(x));m.fitBounds(b,30)}}},
+   guide(a,b){gd.setPath(a&&b?[{lat:a.lat,lng:a.lon},{lat:b.lat,lng:b.lon}]:[])},
+   me(p,go){const c={lat:p.lat,lng:p.lon};let f=c;if(dot.getVisible()){const q=dot.getPosition();f={lat:q.lat(),lng:q.lng()}}dot.setVisible(true);ac.setVisible(true);ac.setCenter(c);ac.setRadius(Math.max(p.acc||5,5));
+    const t0=performance.now();cancelAnimationFrame(raf);const step=t=>{const k=Math.min(1,(t-t0)/900);dot.setPosition({lat:f.lat+(c.lat-f.lat)*k,lng:f.lng+(c.lng-f.lng)*k});if(k<1)raf=requestAnimationFrame(step)};raf=requestAnimationFrame(step);
+    if(go){m.setCenter(c);if(m.getZoom()<17)m.setZoom(17)}},
+   set(pts,fill,follow){
+   const a=pts.map(p=>({lat:p.lat,lng:p.lon}));line.setPath(a);shape.setPath(fill?a:[]);if(!a.length)return;
+   
+   if(follow===null)return;if(follow||a.length<3){m.setCenter(a[a.length-1]);if(m.getZoom()<17)m.setZoom(17)}
+   else{const b=new google.maps.LatLngBounds();a.forEach(x=>b.extend(x));m.fitBounds(b,30)}}};
+ }
+ if(typeof L==="undefined"){el.textContent="Map load nahi hua. Internet check karo.";return{size(){},set(){},me(){},ground(){},guide(){}}}
+ m=L.map(el,{zoomControl:false}).setView([20.59,78.96],5);
+ L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png",{maxZoom:19,attribution:"© OpenStreetMap"}).addTo(m);
+ line=L.polyline([],{color:"#16a34a",weight:6}).addTo(m);
+ shape=L.polygon([],{color:"#16a34a",weight:0,fillOpacity:.25}).addTo(m);
+ dot=L.circleMarker([0,0],{radius:9,color:"#fff",weight:3,fillColor:"#2563eb",fillOpacity:1});
+ const acc=L.circle([0,0],{radius:5,weight:0,fillColor:'#2563eb',fillOpacity:.15});
+ const gl=L.polygon([],{color:"#3b82f6",weight:6,opacity:.6,fillOpacity:.08}).addTo(m),gd=L.polyline([],{color:"#f59e0b",weight:3,dashArray:"6 8"}).addTo(m),fl=L.marker([0,0],{icon:L.divIcon({html:"🚩",className:"flag",iconSize:[28,28],iconAnchor:[6,26]}),interactive:false});let raf=0;
+ return{size(){m.invalidateSize()},
+  ground(pts,fit){const a=pts?pts.map(p=>[p.lat,p.lon]):[];gl.setLatLngs(a);if(a.length){if(!m.hasLayer(fl))fl.addTo(m);fl.setLatLng(a[0]);if(fit)m.fitBounds(L.latLngBounds(a),{padding:[30,30],maxZoom:19})}else if(m.hasLayer(fl))m.removeLayer(fl)},
+  guide(a,b){gd.setLatLngs(a&&b?[[a.lat,a.lon],[b.lat,b.lon]]:[])},
+  me(p,go){const c=[p.lat,p.lon];let f=c;if(!m.hasLayer(dot)){acc.addTo(m);dot.addTo(m);dot.setLatLng(c)}else{const q=dot.getLatLng();f=[q.lat,q.lng]}
+   acc.setLatLng(c).setRadius(Math.max(p.acc||5,5));const t0=performance.now();cancelAnimationFrame(raf);
+   const step=t=>{const k=Math.min(1,(t-t0)/900);dot.setLatLng([f[0]+(c[0]-f[0])*k,f[1]+(c[1]-f[1])*k]);if(k<1)raf=requestAnimationFrame(step)};raf=requestAnimationFrame(step);
+   if(go)m.setView(c,Math.max(m.getZoom(),17))},
+  set(pts,fill,follow){
+  const a=pts.map(p=>[p.lat,p.lon]);line.setLatLngs(a);shape.setLatLngs(fill?a:[]);if(!a.length)return;
+  
+  if(follow===null)return;if(follow||a.length<3)m.setView(a[a.length-1],Math.max(m.getZoom(),17));
+  else m.fitBounds(L.latLngBounds(a),{padding:[30,30],maxZoom:19})}};
+}
+
+/* GPS engine: ek live watch (blue dot) + run/ground recording */
+let timer=null,wid=null,wake=null,cur=null;
+function lock(){try{navigator.wakeLock&&navigator.wakeLock.request("screen").then(l=>wake=l).catch(()=>{})}catch(e){}}
+function warn(t){const w=$("warn");w.textContent=t;w.hidden=false}
+function onPos(p){const first=!cur;cur=p;$("warn").hidden=true;$("perm").hidden=true;let q=p;if(AG&&run){const sp=snap(p,AG.pts);if(sp.m<25)q=Object.assign({},p,sp.pt)}
+ V1&&V1.me(q,first);V2&&V2.me(p,first);if(run)onRunPt(p);if(gm)onGround(p);guideUpd(p)}
+let ps="prompt";
+function watchLive(){
+ if(wid!==null)return;
+ wid=navigator.geolocation.watchPosition(p=>{ps="granted";onPos({lat:p.coords.latitude,lon:p.coords.longitude,t:p.timestamp,acc:p.coords.accuracy,v:p.coords.speed})},
+  e=>{if(e.code===1){ps="denied";showPerm()}else warn("GPS signal nahi mil raha. Phone ki Location on rakho aur khule me jao.")},
+  {enableHighAccuracy:true,maximumAge:0,timeout:30000})}
+function showPerm(){
+ const m={insecure:["Ye page https par nahi khula, isliye Chrome location allow ka popup dikha hi nahi sakta. Page ko https link se kholo (tiiny.host). Abhi demo dekhna ho to Test mode on karo.","Test mode on karo"],denied:["Location block hai. Chrome me address bar ke left wale icon par tap karo → Permissions → Location → Allow. Phir Dobara try dabao.","Dobara try"]}[ps]||["RunTrack ko live location chahiye, taaki map par aapka dot, speed aur distance dikhe.","Allow location"];
+ $("perm").hidden=false;$("pm").textContent=m[0];$("pa").textContent=m[1]}
+function needLoc(){if(S.sim||cur||ps==="granted")return false;showPerm();return true}
+async function startLive(){
+ if(S.sim)return;
+ if(!navigator.geolocation||!window.isSecureContext){ps="insecure";showPerm();return}
+ try{ps=(await navigator.permissions.query({name:"geolocation"})).state}catch(e){}
+ if(ps==="granted")watchLive();else showPerm()}
+$("pa").onclick=()=>{if(ps==="insecure"){S.sim=true;persist();location.reload();return}navigator.geolocation.getCurrentPosition(()=>{ps="granted";$("perm").hidden=true;watchLive()},e=>{if(e.code===1){ps="denied";showPerm()}else toast("GPS signal nahi mila. Khule me jao.")},{enableHighAccuracy:true,timeout:20000})};
+$("pl").onclick=()=>{$("perm").hidden=true};
+function track(){if(S.sim){let a=0;timer=setInterval(()=>{a+=.05;onPos({lat:28.6139+Math.sin(a)*.00054,lon:77.209+Math.cos(a)*.0006,t:Date.now(),acc:5})},1000)}else lock()}
+function untrack(){clearInterval(timer);timer=null;try{wake&&wake.release()}catch(e){}wake=null}
+function onGround(p){if(p.acc>40)return;const q=gp[gp.length-1];if(q&&hav(q,p)<2)return;gp.push(p);drawGround()}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden&&(run||gm)&&!S.sim)lock()});
+
+/* Active ground, voice, laps */
+let AG=null;
+function snap(p,pts){let best=p,bd=1e9;const k=Math.cos(rad(p.lat));
+ for(let i=0;i<pts.length;i++){const a=pts[i],b=pts[(i+1)%pts.length],ax=(a.lon-p.lon)*k,ay=a.lat-p.lat,dx=(b.lon-a.lon)*k,dy=b.lat-a.lat,L2=dx*dx+dy*dy;
+  const t=L2?Math.max(0,Math.min(1,-(ax*dx+ay*dy)/L2)):0,x=ax+t*dx,y=ay+t*dy,d=Math.hypot(x,y);if(d<bd){bd=d;best={lat:p.lat+y,lon:p.lon+x/k}}}
+ return{pt:best,m:bd*111320}}
+function pickVoice(){const a=speechSynthesis.getVoices(),q=v=>Number(/google|neural|natural|online/i.test(v.name));return a.find(v=>v.name===S.vname)||a.filter(v=>/^hi/i.test(v.lang)).sort((x,y)=>q(y)-q(x))[0]||null}
+function speak(t,r){try{const v=pickVoice(),hi=!v||/^hi/i.test(v.lang),u=new SpeechSynthesisUtterance(hi?t:(r||t));if(v)u.voice=v;u.lang=v?v.lang:"hi-IN";u.rate=S.rate||.95;speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){}}
+function say(t,r){if(S.voice)speak(t,r)}
+function fillVoices(){try{const a=speechSynthesis.getVoices().filter(v=>/^(hi|en-IN)/i.test(v.lang));$("sw").innerHTML='<option value="">Auto (sabse achhi Hindi)</option>'+a.map(v=>`<option value="${v.name}">${v.name} (${v.lang})</option>`).join("");$("sw").value=S.vname||""}catch(e){}}
+function loadActive(fit){
+ const g=S.grounds.find(x=>x.id===S.active&&x.pts);AG=null;
+ if(g){const pts=g.pts.map(q=>({lat:q[0],lon:q[1]})),pm=perim(pts)+hav(pts[pts.length-1],pts[0]),leave=Math.min(30,Math.max(10,pm/8));AG={name:g.name||"Ground",pts,start:pts[0],leave,enter:Math.min(15,leave*.6)}}else S.active=null;
+ $("gch").hidden=!AG;if(V1){V1.ground(AG&&AG.pts,fit);V1.guide(null)}if(AG&&cur)guideUpd(cur);drawLaps()}
+function guideUpd(p){if(!AG||!V1)return;const d=hav(p,AG.start),far=d>AG.enter&&(!run||run.wait);V1.guide(far?p:null,AG.start);
+ $("gct").textContent=AG.name+" · start point "+(d<1000?Math.round(d)+" m":(d/1000).toFixed(1)+" km")+" door";
+ if(!run)$("st").textContent=d<=AG.enter?"Start point par ho. Start dabao.":"Start point tak pahuncho ("+Math.round(d)+" m)."}
+function drawLaps(){const a=run?run.laps:[];$("lp").textContent=a.length;$("ll").textContent=a.length?"last "+mmss(a[a.length-1])+" · best "+mmss(Math.min(...a)):(AG?"Start point se shuru karo":"Ground chuno, phir Start dabao")}
+function lap(){const now=Date.now(),sec=(now-run.lt)/1000;if(sec<10)return;run.laps.push(sec);run.lt=now;run.armed=false;
+ const t=Math.round(sec),mm=Math.floor(t/60),ss=t%60;say("चक्कर "+run.laps.length+" पूरा हुआ. समय "+(mm?mm+" मिनट ":"")+ss+" सेकंड.","Chakkar "+run.laps.length+" poora hua. Samay "+(mm?mm+" minute ":"")+ss+" second.");toast("Chakkar "+run.laps.length+": "+mmss(sec));drawLaps()}
+function lapStep(p){const d=hav(p,AG.start);
+ if(run.wait){if(d>AG.enter)return"Start point tak pahuncho ("+Math.round(d)+" m), phir chakkar ginenge.";run.wait=false;run.lt=Date.now();run.armed=false;say("स्टार्ट पॉइंट पर पहुँच गए. अब दौड़ो!","Start point par pahunch gaye. Ab daudo!");return"Chakkar shuru!"}
+ if(!run.armed&&d>AG.leave)run.armed=true;if(run.armed&&d<AG.enter)lap();
+ return"Chakkar "+(run.laps.length+1)+" chal raha hai · GPS ±"+Math.round(p.acc)+" m"}
+/* Running */
+let V1,V2,run=null,gm=false,gp=[];
+function setFab(){const f=$("fab");f.textContent=run?"Stop":"Start";f.classList.toggle("stop",!!run)}
+function drawHome(){const d=run?run.d:0;$("spd").textContent=(run?run.v||0:0).toFixed(1);$("gd").textContent=(d/1000).toFixed(2);$("gg").textContent=S.goal;$("gb").style.width=Math.min(100,d/10/S.goal)+"%";if(V1&&run)V1.set(run.pts,false,AG?null:true)}
+function onRunPt(p){
+ if(p.acc>40){$("st").textContent="GPS weak (±"+Math.round(p.acc)+" m). Khule me aao.";return}
+ const q=run.pts[run.pts.length-1];
+ if(q){const m=hav(q,p);if(m<4)return;run.d+=m;const dt=(p.t-q.t)/1000,v=(p.v!=null&&p.v>=0)?p.v*3.6:(dt>0?m/dt*3.6:0);run.v=run.v?run.v*.6+v*.4:v}
+ run.pts.push(p);let ms="GPS OK (±"+Math.round(p.acc)+" m)"+(S.sim?" · Test mode":"");if(AG&&run.g)ms=lapStep(p)||ms;$("st").textContent=ms;drawHome()}
+function toggleRun(){
+ if(gm){toast("Pehle ground mapping Stop karo.");return}
+ show("home");
+ if(!run&&needLoc())return;
+ if(!run){run={t0:Date.now(),d:0,v:0,pts:[],laps:[],lt:Date.now(),armed:false,g:!!AG,wait:!!AG&&(!cur||hav(cur,AG.start)>AG.enter)};track();say(AG&&run.wait?"स्टार्ट पॉइंट तक पहुँचिए":"दौड़ शुरू",AG&&run.wait?"Start point tak pahunchiye":"Daud shuru");drawLaps();$("st").textContent="GPS signal dhoondh rahe hain...";setFab()}
+ else{untrack();const sec=Math.floor((Date.now()-run.t0)/1000),km=+(run.d/1000).toFixed(2);
+  if(km>0||sec>10){S.runs.unshift({date:new Date().toLocaleString("en-IN"),km,sec,laps:run.laps.map(x=>Math.round(x))});S.runs=S.runs.slice(0,100);persist()}
+  toast("Run save hua: "+km+" km · "+mmss(sec));say("दौड़ पूरी हुई."+(run.laps.length?" "+run.laps.length+" चक्कर पूरे हुए.":""),"Daud poori hui."+(run.laps.length?" "+run.laps.length+" chakkar poore hue.":""));run=null;setFab();drawHome();drawLaps();renderHist()}}
+
+/* Ground mapping */
+function drawGround(){
+ const closed=!gm&&gp.length>2;$("mp").textContent=Math.round(perim(gp)+(closed?hav(gp[gp.length-1],gp[0]):0));$("ma").textContent=Math.round(area(gp));
+ if(V2)V2.set(gp,gp.length>2,false)}
+$("mg").onclick=()=>{
+ if(run){toast("Pehle run Stop karo.");return}
+ if(needLoc())return;
+ gp=[];gm=true;
+ track();
+ $("mg").disabled=true;$("ms").disabled=false};
+$("ms").onclick=()=>{
+ untrack();gm=false;$("mg").disabled=false;$("ms").disabled=true;
+ if(gp.length>2){const id=Date.now();S.grounds.unshift({id,name:"Ground "+(S.grounds.length+1),date:new Date().toLocaleString("en-IN"),m:Math.round(perim(gp)+hav(gp[gp.length-1],gp[0])),a:Math.round(area(gp)),pts:gp.map(p=>[+p.lat.toFixed(6),+p.lon.toFixed(6)])});S.grounds=S.grounds.slice(0,50);S.active=id;persist();loadActive(false);toast("Ground save. Start point 🚩 set ho gaya. Home par Start dabao.")}
+ else toast("Kam points mile. Thoda chalke dobara try karo.");
+ drawGround();renderGrounds()};
+
+/* Lists */
+function renderHist(){
+ const km=S.runs.reduce((a,r)=>a+r.km,0);$("ht").innerHTML=S.runs.length+" runs<i>"+km.toFixed(2)+" km</i>";
+ $("hl").innerHTML=S.runs.length?S.runs.map((r,i)=>`<div class="card item"><div><b style="font:700 24px 'Barlow Condensed'">${r.km} km</b><span>${mmss(r.sec)}${r.km>0?" · "+mmss(r.sec/r.km)+" /km":""}${r.laps&&r.laps.length?" · "+r.laps.length+" chakkar, best "+mmss(Math.min(...r.laps)):""}</span><small>${r.date}</small></div><button class="x" data-k="runs" data-i="${i}" aria-label="Delete run">✕</button></div>`).join(""):'<p class="empty">Abhi koi run nahi. Start dabao.</p>'}
+function renderGrounds(){
+ $("gl").innerHTML=S.grounds.length?S.grounds.map((g,i)=>`<div class="card item"><div><b style="font:700 24px 'Barlow Condensed'">${g.name||"Ground"}</b><span>${g.a} m² · ${g.m} m</span><small>${g.date}${S.active===g.id?" · ✔ chuna hua":""}</small>${g.pts?`<button class="sbtn" data-u="${i}" style="margin-top:6px">Is ground par run karo</button>`:""}</div><button class="x" data-k="grounds" data-i="${i}" aria-label="Delete ground">✕</button></div>`).join(""):'<p class="empty">Abhi koi ground save nahi hai.</p>'}
+document.addEventListener("click",e=>{const u=e.target.closest("[data-u]");if(u){S.active=S.grounds[+u.dataset.u].id;persist();renderGrounds();loadActive(true);show("home");toast("Ground chuna gaya. Start point 🚩 tak pahuncho.");return}
+ const b=e.target.closest(".x");if(!b)return;S[b.dataset.k].splice(+b.dataset.i,1);persist();renderHist();renderGrounds();loadActive(false)});
+
+/* Navigation + settings */
+function show(t){
+ document.querySelectorAll(".tab").forEach(e=>e.classList.toggle("on",e.id==="t-"+t));
+ document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.t===t));
+ setTimeout(()=>{if(t==="home"&&V1)V1.size();if(t==="ground"&&V2)V2.size()},50)}
+document.querySelectorAll("nav button").forEach(b=>b.onclick=()=>show(b.dataset.t));
+$("prof").onclick=()=>show("set");$("fab").onclick=toggleRun;try{speechSynthesis.onvoiceschanged=fillVoices}catch(e){}
+$("vt").onclick=()=>{S.vname=$("sw").value;S.rate=+$("sr").value||.95;const v=pickVoice();if(!v||!/^hi/i.test(v.lang))toast("Hindi voice nahi mili. Phone Settings me Text-to-speech me Google Hindi voice download karo.");speak("चक्कर 3 पूरा हुआ. समय 1 मिनट 28 सेकंड.","Chakkar 3 poora hua. Samay 1 minute 28 second.")};$("gf").onclick=()=>{if(AG&&V1)V1.ground(AG.pts,true)};$("gx").onclick=()=>{S.active=null;persist();loadActive(false);renderGrounds();$("st").textContent="Ground hata diya."};
+document.querySelectorAll(".loc").forEach(b=>b.onclick=()=>{if(!cur){if(!needLoc())toast("GPS signal dhoondh rahe hain. Khule me jao.");return}(b.dataset.m==="1"?V1:V2).me(cur,true)});
+function applyProf(){$("prof").textContent=(S.name[0]||"R").toUpperCase();$("sn").value=S.name;$("sg").value=S.goal;$("sk").value=S.key;$("ss").checked=S.sim;$("sv").checked=S.voice!==false;$("sr").value=S.rate||.95;fillVoices()}
+$("save").onclick=()=>{
+ const key=$("sk").value.trim(),reload=key!==S.key;
+ S.name=$("sn").value.trim()||"Runner";S.goal=Math.max(.5,+$("sg").value||5);S.key=key;S.sim=$("ss").checked;S.voice=$("sv").checked;S.vname=$("sw").value;S.rate=+$("sr").value||.95;persist();applyProf();drawHome();
+ if(reload){location.reload();return}toast("Settings save ho gayi.")};
+setInterval(()=>{$("clk").textContent=new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});if(run)$("rt").textContent=mmss((Date.now()-run.t0)/1000)},1000);
+
+/* PWA */
+let dip=null;
+addEventListener("beforeinstallprompt",e=>{e.preventDefault();dip=e;$("inst").hidden=false});
+addEventListener("appinstalled",()=>{$("inst").hidden=true;toast("RunTrack install ho gaya.")});
+$("inst").onclick=async()=>{if(!dip)return;dip.prompt();await dip.userChoice;dip=null;$("inst").hidden=true};
+if("serviceWorker" in navigator&&/^https?:$/.test(location.protocol))navigator.serviceWorker.register("sw.js").catch(()=>{});
+/* Boot */
+function boot(){
+ V1=MapView($("map1"));V2=MapView($("map2"));applyProf();renderHist();renderGrounds();drawHome();drawGround();loadActive(false);
+ startLive()}
+if(S.key){
+ window.gm_authFailure=()=>toast("Google Maps key galat hai. Settings me check karo.");
+ const s=document.createElement("script");s.src="https://maps.googleapis.com/maps/api/js?key="+encodeURIComponent(S.key)+"&callback=boot";
+ s.onerror=()=>{S.key="";boot()};document.head.appendChild(s);
+}else window.addEventListener("load",boot);
+</script>
+</body>
+</html>
